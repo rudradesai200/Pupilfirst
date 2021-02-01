@@ -25,14 +25,18 @@ def parse_dns(dns)
   # For CNAME type, we can map it to a different domain
   # We will return a dict of records from this function
 
-  # Using a fold_left alternative of ruby
-  dns.inject({}) do |accumulator, elem|
-    # First clean the whitespace and then split for ','
-    dns_split = elem.gsub(/\s+/, "").split(",")
+  # Cleaning the strings
+  dns = dns.
+    reject {|line| line.empty?}.
+    map {|line| line.strip.split(", ")}.
+    reject {|record| record.length != 3}
 
+  # Using a fold_left alternative of ruby
+  dns.inject({}) do |accumulator, record|
+    # First clean the whitespace and then split for ','
     # Fetch A and CNAME records else ignore
-    if dns_split[0] == "A" or dns_split[0] == "CNAME"
-      accumulator[dns_split[1]] = dns_split[2]
+    if record[0] == "A" or record[0] == "CNAME"
+      accumulator[record[1]] = {:type => record[0], :target => record[2]}
     end
 
     # Return accumulator
@@ -55,17 +59,23 @@ def resolve(dns_records, lookup_chain, domain)
     # If mapped, it will be either A or CNAME record
     # In both the cases, push the result and resolve recursively
     next_domain = dns_records.fetch(domain)
-    lookup_chain.append(next_domain)
-    resolve(dns_records,lookup_chain,next_domain)
+    lookup_chain.append(next_domain[:target])
+
+    # Check the type of the record
+    if(next_domain[:type] == "CNAME")
+      resolve(dns_records,lookup_chain,next_domain[:target])
+    else
+      if(next_domain[:type] == "A")
+        lookup_chain
+      else
+        ["Error: illegal record type found - " + next_domain[:type]]
+      end
+    end
+
   else
     # If the domain is not mapped
-    # It may be an IP address, in that case return the lookup_chain
-    # OR the record may not exist, print the error
-    if lookup_chain.length() == 1
-      ["Error: record not found for " + domain]
-    else
-      lookup_chain
-    end
+    # The record may not exist, print the error
+    ["Error: record not found for " + domain]
   end
 end
 
