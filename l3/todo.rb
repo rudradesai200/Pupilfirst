@@ -6,6 +6,7 @@ class Todo
     @content = text
     @due_date = date
     @completed = completed
+
   end
 
   def overdue? ; (Date.today > @due_date) end
@@ -17,10 +18,9 @@ class Todo
   def completed? ; @completed end
 
   def to_displayable_string
-    ret_str = "[ ] "
-    ret_str = "[X] " if @completed
+    ret_str = @completed ? "[X] " : "[ ] "
     ret_str += "#{@content}"
-    ret_str += " #{@due_date}" if not self.due_today?
+    ret_str += self.due_today? ? "" : " #{@due_date}"
     ret_str
   end
 end
